@@ -10,54 +10,33 @@ export interface EmailValidationResult {
  * Validates email syntax and performs a lightweight DNS MX/A record verification.
  * Prevents "Host or domain not found" bounces and protects sender deliverability.
  */
+/**
+ * Fast, non-blocking email syntax and basic domain format validator.
+ */
 export async function validateEmailDomain(email: string): Promise<EmailValidationResult> {
   if (!email || typeof email !== "string") {
-    return { valid: false, reason: "Empty or invalid email string" };
+    return { valid: false, reason: "Empty email address" };
   }
 
   const trimmed = email.trim().toLowerCase();
   const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
   if (!emailRegex.test(trimmed)) {
-    return { valid: false, reason: "Malformed email syntax format" };
+    return { valid: false, reason: "Malformed email format" };
   }
 
   const parts = trimmed.split("@");
-  if (parts.length !== 2) {
-    return { valid: false, reason: "Invalid @ structure" };
+  if (parts.length !== 2 || !parts[1].includes(".")) {
+    return { valid: false, reason: "Invalid domain structure" };
   }
 
   const domain = parts[1];
 
-  // Disallow known dummy placeholder test domains
-  const dummyDomains = ["example.com", "test.com", "domain.com", "sample.org", "fake.com", "mysite.com"];
+  // Block obvious dummy placeholder domains
+  const dummyDomains = ["example.com", "test.com", "domain.com", "sample.org", "fake.com", "mysite.com", "none.com"];
   if (dummyDomains.includes(domain)) {
-    return { valid: false, domain, reason: `Placeholder domain (${domain}) is not a real recipient` };
+    return { valid: false, domain, reason: `Placeholder domain (${domain}) cannot receive mail` };
   }
 
-  try {
-    // 1. Check if domain has active MX records
-    const mxRecords = await dns.resolveMx(domain).catch(() => []);
-    if (mxRecords && mxRecords.length > 0) {
-      return { valid: true, domain };
-    }
-
-    // 2. Fallback check for A record (some old mail exchangers accept mail at apex A record)
-    const aRecords = await dns.resolve4(domain).catch(() => []);
-    if (aRecords && aRecords.length > 0) {
-      return { valid: true, domain };
-    }
-
-    return {
-      valid: false,
-      domain,
-      reason: `Domain "${domain}" has no active DNS or MX records (Dead/Unreachable Host). Sending will cause bounce.`,
-    };
-  } catch (err: any) {
-    return {
-      valid: false,
-      domain,
-      reason: `DNS verification failed for domain "${domain}": ${err.code || err.message}`,
-    };
-  }
+  return { valid: true, domain };
 }

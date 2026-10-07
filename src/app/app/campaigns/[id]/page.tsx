@@ -934,20 +934,27 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
                     {dispatchResults.dispatches?.map((d: any, idx: number) => (
                       <div
                         key={idx}
-                        className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200"
+                        className="p-2 bg-white rounded border border-slate-200 space-y-1"
                       >
-                        <span className="font-medium text-slate-800 truncate max-w-[200px]">
-                          {d.toEmail}
-                        </span>
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                            d.status === "SENT"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {d.status === "SENT" ? "Delivered (250 OK)" : "Failed"}
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-slate-800 truncate max-w-[240px]">
+                            {d.toEmail}
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              d.status === "SENT"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {d.status === "SENT" ? "Delivered (250 OK)" : "Failed"}
+                          </span>
+                        </div>
+                        {d.error && (
+                          <div className="text-[10px] text-red-600 bg-red-50/70 px-2 py-0.5 rounded font-mono">
+                            {d.error}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
