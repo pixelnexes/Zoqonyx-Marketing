@@ -11,7 +11,10 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+import { useToast } from "@/components/ui/toast";
+
 export default function BillingPage() {
+  const toast = useToast();
   const [billingData, setBillingData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
@@ -41,10 +44,10 @@ export default function BillingPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to switch plan");
 
-      alert(`Successfully upgraded/switched plan to ${planName}!`);
+      toast.success("Plan Switched", `Successfully upgraded/switched workspace tier to ${planName}!`);
       fetchBilling();
     } catch (err: any) {
-      alert(err.message);
+      toast.error("Plan Switch Failed", err.message);
     } finally {
       setSwitching(null);
     }

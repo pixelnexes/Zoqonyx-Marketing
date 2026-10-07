@@ -26,8 +26,10 @@ import {
   Check,
 } from "lucide-react";
 import * as XLSX from "xlsx";
+import { useToast } from "@/components/ui/toast";
 
 export default function LeadsPage() {
+  const toast = useToast();
   const [leads, setLeads] = useState<any[]>([]);
   const [categories, setCategories] = useState<Array<{ name: string; count: number }>>([]);
   const [pagination, setPagination] = useState<any>({ total: 0, page: 1, limit: 25, totalPages: 1 });
@@ -114,10 +116,11 @@ export default function LeadsPage() {
         body: JSON.stringify({ id }),
       });
       if (!res.ok) throw new Error("Failed to delete lead");
+      toast.success("Lead Deleted", `Lead "${name}" removed.`);
       fetchLeads(pagination.page);
       fetchCategories();
     } catch (err: any) {
-      alert(err.message);
+      toast.error("Delete Failed", err.message);
     }
   };
 
@@ -133,11 +136,12 @@ export default function LeadsPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to delete leads");
+      toast.success("Leads Deleted", `Successfully deleted ${selectedLeadIds.length} leads.`);
       setSelectedLeadIds([]);
       fetchLeads(1);
       fetchCategories();
     } catch (err: any) {
-      alert(err.message);
+      toast.error("Delete Failed", err.message);
     }
   };
 
@@ -151,11 +155,12 @@ export default function LeadsPage() {
         body: JSON.stringify({ category: catName }),
       });
       if (!res.ok) throw new Error("Failed to delete category");
+      toast.success("Folder Removed", `Category "${catName}" deleted.`);
       setSelectedCategory("ALL");
       fetchLeads(1);
       fetchCategories();
     } catch (err: any) {
-      alert(err.message);
+      toast.error("Delete Failed", err.message);
     }
   };
 
@@ -200,8 +205,9 @@ export default function LeadsPage() {
       const catLabel = selectedCategory === "ALL" ? "all_leads" : selectedCategory.toLowerCase().replace(/[^a-z0-9]/g, "_");
       const filename = `zoqonyx_${catLabel}_${Date.now()}.${format}`;
       XLSX.writeFile(workbook, filename);
+      toast.success("Export Complete", `Exported ${exportData.length} leads to ${filename}`);
     } catch (err: any) {
-      alert("Export failed: " + err.message);
+      toast.error("Export Failed", err.message);
     }
   };
 
@@ -221,7 +227,7 @@ export default function LeadsPage() {
         const json: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
         if (json.length === 0) {
-          alert("The uploaded spreadsheet is empty.");
+          toast.error("Empty File", "The uploaded spreadsheet contains no rows.");
           return;
         }
 
@@ -242,8 +248,9 @@ export default function LeadsPage() {
         }
         setColumnMapping(mapping);
         setWizardStep(2);
+        toast.info("Columns Detected", `Loaded ${json.length} rows with ${headers.length} columns.`);
       } catch (err: any) {
-        alert("Could not parse file: " + err.message);
+        toast.error("File Parse Error", err.message);
       }
     };
     reader.readAsArrayBuffer(file);
@@ -252,7 +259,7 @@ export default function LeadsPage() {
   // Confirm Import
   const handleExecuteImport = async () => {
     if (!columnMapping.email) {
-      alert("Please map the Email Address column.");
+      toast.error("Missing Mapping", "Please map the Email Address column before importing.");
       return;
     }
 
@@ -285,10 +292,11 @@ export default function LeadsPage() {
 
       setImportResult(data.result);
       setWizardStep(3);
+      toast.success("Import Finished", `Successfully imported ${data.result?.imported || 0} leads.`);
       fetchLeads(1);
       fetchCategories();
     } catch (err: any) {
-      alert("Import error: " + err.message);
+      toast.error("Import Error", err.message);
     } finally {
       setImporting(false);
     }
@@ -324,10 +332,11 @@ export default function LeadsPage() {
       setNewCompany("");
       setNewPhone("");
       setNewWebsite("");
+      toast.success("Lead Created", `Added ${newEmail} to database.`);
       fetchLeads(1);
       fetchCategories();
     } catch (err: any) {
-      alert(err.message);
+      toast.error("Create Lead Failed", err.message);
     }
   };
 

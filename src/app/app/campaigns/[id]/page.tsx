@@ -27,6 +27,7 @@ import {
   Image as ImageIcon,
   Check,
 } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
 
 export default function CampaignDetailPage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -149,9 +150,11 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
     ]);
   };
 
+  const toast = useToast();
+
   const handleRemoveStep = (index: number) => {
     if (steps.length <= 1) {
-      alert("Campaign must have at least one sequence step.");
+      toast.error("Sequence Requirement", "Campaign must have at least one sequence step.");
       return;
     }
     const updated = steps.filter((_, i) => i !== index).map((s, i) => ({ ...s, stepNumber: i + 1 }));
@@ -175,10 +178,10 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save sequence");
 
-      alert("Sequence cadence saved successfully!");
+      toast.success("Sequence Saved", "Campaign sequence cadence updated successfully.");
       fetchCampaign();
     } catch (err: any) {
-      alert(err.message);
+      toast.error("Save Failed", err.message);
     } finally {
       setSaving(false);
     }
@@ -191,9 +194,13 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update status");
 
+      toast.success(
+        campaign.status === "RUNNING" ? "Campaign Paused" : "Campaign Launched",
+        `Campaign status updated to ${campaign.status === "RUNNING" ? "PAUSED" : "RUNNING"}`
+      );
       fetchCampaign();
     } catch (err: any) {
-      alert(err.message);
+      toast.error("Status Update Failed", err.message);
     }
   };
 
@@ -211,12 +218,12 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Test send failed");
 
-      alert(`Live preview test email dispatched to ${testEmail}! Check your inbox.`);
+      toast.success("Test Email Dispatched", `Live preview test email sent to ${testEmail}! Check your inbox.`);
       setShowTestModal(false);
       setTestEmail("");
       fetchCampaign();
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      toast.error("Test Send Error", err.message);
     } finally {
       setSendingTest(false);
     }
@@ -234,9 +241,10 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Batch dispatch failed");
       setDispatchResults(data);
+      toast.success("Batch Dispatched", `Successfully delivered ${data.successCount} outbound emails.`);
       fetchCampaign();
     } catch (err: any) {
-      alert(`Dispatch error: ${err.message}`);
+      toast.error("Dispatch Error", err.message);
     } finally {
       setDispatching(false);
     }

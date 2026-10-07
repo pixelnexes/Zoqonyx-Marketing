@@ -14,7 +14,10 @@ import {
 } from "lucide-react";
 import { MOCK_CONVERSATIONS } from "@/lib/mock-store";
 
+import { useToast } from "@/components/ui/toast";
+
 export default function InboxPage() {
+  const toast = useToast();
   const [conversations, setConversations] = useState<any[]>([]);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -54,7 +57,7 @@ export default function InboxPage() {
 
     setSendingReply(true);
     setTimeout(() => {
-      alert("Reply sent via connected mailbox: " + selectedConv?.mailbox?.email);
+      toast.success("Reply Sent", `Direct response sent from ${selectedConv?.mailbox?.email || "connected mailbox"}`);
       setReplyText("");
       setSendingReply(false);
     }, 600);

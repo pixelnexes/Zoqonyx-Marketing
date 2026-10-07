@@ -19,8 +19,10 @@ import {
   Sparkles,
 } from "lucide-react";
 import * as XLSX from "xlsx";
+import { useToast } from "@/components/ui/toast";
 
 export default function CampaignsPage() {
+  const toast = useToast();
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,9 +48,10 @@ export default function CampaignsPage() {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete campaign");
+      toast.success("Campaign Deleted", `"${campaignName}" was removed.`);
       fetchCampaigns();
     } catch (err: any) {
-      alert("Delete failed: " + err.message);
+      toast.error("Delete Failed", err.message);
     }
   };
 
@@ -61,9 +64,13 @@ export default function CampaignsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update campaign state");
 
+      toast.success(
+        currentStatus === "RUNNING" ? "Campaign Paused" : "Campaign Launched",
+        `Campaign status updated to ${currentStatus === "RUNNING" ? "PAUSED" : "RUNNING"}`
+      );
       fetchCampaigns();
     } catch (err: any) {
-      alert(err.message);
+      toast.error("Status Update Failed", err.message);
     }
   };
 
@@ -86,8 +93,9 @@ export default function CampaignsPage() {
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Campaigns");
       XLSX.writeFile(workbook, `zoqonyx_campaigns_${Date.now()}.${format}`);
+      toast.success("Export Complete", `Downloaded campaigns as ${format.toUpperCase()}`);
     } catch (err: any) {
-      alert("Export failed: " + err.message);
+      toast.error("Export Failed", err.message);
     }
   };
 

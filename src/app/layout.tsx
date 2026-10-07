@@ -40,6 +40,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { ToastProvider } from "@/components/ui/toast";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -48,7 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${plusJakarta.variable} ${jetbrainsMono.variable}`}>
       <body className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased selection:bg-sky-600 selection:text-white">
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

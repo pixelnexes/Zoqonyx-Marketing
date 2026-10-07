@@ -15,8 +15,10 @@ import {
   Globe,
   Sparkles,
 } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
 
 export default function MailboxesPage() {
+  const toast = useToast();
   const [mailboxes, setMailboxes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showConnectModal, setShowConnectModal] = useState(false);
@@ -165,9 +167,10 @@ export default function MailboxesPage() {
     try {
       const res = await fetch(`/api/v1/mailboxes/${mailboxId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete mailbox");
+      toast.success("Mailbox Disconnected", `Mailbox "${email}" removed successfully.`);
       fetchMailboxes();
     } catch (err: any) {
-      alert("Delete failed: " + err.message);
+      toast.error("Delete Failed", err.message);
     }
   };
 
@@ -182,13 +185,13 @@ export default function MailboxesPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert("Test email dispatched successfully to " + testRecipient);
+        toast.success("Test Email Dispatched", `Verified test email delivered to ${testRecipient}`);
         setShowTestEmailModal(null);
       } else {
-        alert("Test dispatch failed: " + (data.error || "Unknown error"));
+        toast.error("Test Dispatch Failed", data.error || "Unknown error");
       }
     } catch (err: any) {
-      alert("Error: " + err.message);
+      toast.error("Test Send Error", err.message);
     } finally {
       setSendingTest(false);
     }

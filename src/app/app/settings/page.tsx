@@ -16,7 +16,10 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import { useToast } from "@/components/ui/toast";
+
 export default function SettingsPage() {
+  const toast = useToast();
   const [apiKeys, setApiKeys] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newKeyName, setNewKeyName] = useState("");
@@ -53,9 +56,10 @@ export default function SettingsPage() {
 
       setGeneratedKey(data.apiKey);
       setNewKeyName("");
+      toast.success("API Key Generated", "Your new integration API key has been created successfully.");
       fetchKeys();
     } catch (err: any) {
-      alert(err.message);
+      toast.error("Generation Failed", err.message);
     } finally {
       setGenerating(false);
     }
