@@ -22,6 +22,10 @@ import {
   Code2,
   RefreshCw,
   Zap,
+  LayoutTemplate,
+  Palette,
+  Image as ImageIcon,
+  Check,
 } from "lucide-react";
 
 export default function CampaignDetailPage({ params }: { params: { id: string } }) {
@@ -44,6 +48,22 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
   const [dispatching, setDispatching] = useState(false);
   const [dispatchResults, setDispatchResults] = useState<any>(null);
 
+  // Template Designer Modal
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [targetStepIndex, setTargetStepIndex] = useState<number>(0);
+  const [tmplThemeColor, setTmplThemeColor] = useState("#0f172a");
+  const [tmplAccentColor, setTmplAccentColor] = useState("#0284c7");
+  const [tmplCompanyName, setTmplCompanyName] = useState("Newix Tech Solutions");
+  const [tmplTagline, setTmplTagline] = useState("Custom Software • AI Solutions • Web & App Development");
+  const [tmplLogoUrl, setTmplLogoUrl] = useState("");
+  const [tmplSenderName, setTmplSenderName] = useState("Thomas");
+  const [tmplSenderTitle, setTmplSenderTitle] = useState("Outreach Specialist");
+  const [tmplPhone, setTmplPhone] = useState("+1 (937) 462-0997");
+  const [tmplWebsite, setTmplWebsite] = useState("https://newixtechsolutions.com");
+  const [tmplPitch, setTmplPitch] = useState(
+    "Are you currently planning any website, app, AI, automation, or software improvements for your business?"
+  );
+
   const fetchCampaign = () => {
     setLoading(true);
     fetch(`/api/v1/campaigns/${id}`)
@@ -60,14 +80,43 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
                 stepType: "EMAIL",
                 waitDays: 0,
                 subject: "Quick question regarding {{name | fallback:'your business'}}",
-                bodyHtml: "<p>Hi {{first_name | fallback:'there'}},</p><p>I noticed {{name}} has a strong market reputation in {{city | fallback:'your city'}}.</p><p>We help businesses in your space streamline outbound client acquisition with guaranteed deliverability.</p><p>Would you be open to a 5-minute conversation this week?</p><p>Best regards,<br/>Alex Vance</p>",
+                bodyHtml: `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f8fafc; padding:30px 15px; font-family:sans-serif;">
+  <tr>
+    <td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background:#ffffff; border-radius:12px; border:1px solid #e2e8f0; overflow:hidden;">
+        <tr>
+          <td style="padding:24px 32px; background:#0f172a; text-align:center;">
+            <div style="font-size:20px; font-weight:bold; color:#ffffff;">Newix Tech Solutions</div>
+            <div style="font-size:12px; color:#94a3b8; margin-top:4px;">Custom Software • AI Solutions • Web & App Development</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:36px 32px; color:#334155; font-size:15px; line-height:1.6;">
+            <p style="margin:0 0 16px;">Hi <strong>{{first_name | fallback:'there'}}</strong>,</p>
+            <p style="margin:0 0 16px;">I came across <strong>{{company | fallback:'your business'}}</strong> and wanted to ask something quickly.</p>
+            <p style="margin:0 0 16px;">Are you currently planning any <strong>website, mobile app, AI, automation, or software improvements</strong> for your business this quarter?</p>
+            <div style="background:#f0f9ff; border-left:4px solid #0284c7; padding:16px; margin:20px 0; border-radius:0 8px 8px 0; color:#0369a1; font-weight:600;">
+              💡 Would it be worth a quick 5-minute chat this week?
+            </div>
+            <p style="margin:24px 0 0;">Best regards,<br/><strong style="color:#0f172a;">Thomas</strong><br/><span style="color:#64748b; font-size:13px;">Newix Tech Solutions</span></p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:18px 32px; background:#f8fafc; border-top:1px solid #f1f5f9; font-size:13px; color:#64748b;">
+            📞 <a href="tel:+19374620997" style="color:#0284c7; text-decoration:none;">+1 (937) 462-0997</a> • 🌐 <a href="https://newixtechsolutions.com" style="color:#0284c7; text-decoration:none;">newixtechsolutions.com</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`,
               },
               {
                 stepNumber: 2,
                 stepType: "EMAIL",
                 waitDays: 3,
                 subject: "Following up regarding {{name}}",
-                bodyHtml: "<p>Hi {{first_name | fallback:'there'}},</p><p>Just following up on my previous note. Let me know if you would like a 60-second summary demo.</p>",
+                bodyHtml: "<p>Hi {{first_name | fallback:'there'}},</p><p>Just following up on my previous note regarding custom web/software solutions for {{company}}. Let me know if you have 5 minutes this week.</p><p>Best,<br/>Thomas • Newix Tech Solutions</p>",
               },
             ]);
           }
@@ -95,7 +144,7 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
         stepType: "EMAIL",
         waitDays: 4,
         subject: `Follow-up #${nextNumber - 1} for {{name}}`,
-        bodyHtml: "<p>Hi {{first_name | fallback:'there'}},</p><p>Wanted to share a quick case study relevant to {{name}}.</p>",
+        bodyHtml: "<p>Hi {{first_name | fallback:'there'}},</p><p>Wanted to share a quick case study relevant to {{name}}.</p><p>Best regards,<br/>Thomas</p>",
       },
     ]);
   };
@@ -193,6 +242,83 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
     }
   };
 
+  const generateCustomTemplateHtml = () => {
+    const logoBlock = tmplLogoUrl.trim()
+      ? `<img src="${tmplLogoUrl.trim()}" alt="${tmplCompanyName}" style="max-height:48px; max-width:200px; display:inline-block; margin-bottom:8px;" />`
+      : `<div style="font-size:22px; font-weight:bold; color:#ffffff; letter-spacing:-0.5px;">${tmplCompanyName}</div>`;
+
+    return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f8fafc; padding:30px 15px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <tr>
+    <td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background-color:#ffffff; border-radius:12px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+        
+        <!-- Header -->
+        <tr>
+          <td style="padding:24px 32px; background-color:${tmplThemeColor}; text-align:center;">
+            ${logoBlock}
+            <div style="font-size:12px; color:#cbd5e1; margin-top:4px; letter-spacing:0.3px;">${tmplTagline}</div>
+          </td>
+        </tr>
+
+        <!-- Content -->
+        <tr>
+          <td style="padding:36px 32px; color:#334155; font-size:15px; line-height:1.6;">
+            <p style="margin:0 0 16px;">Hi <strong>{{First Name | fallback:"there"}}</strong>,</p>
+            <p style="margin:0 0 16px;">I came across <strong>{{Company Name | fallback:"your company"}}</strong> and wanted to ask something quickly.</p>
+            <p style="margin:0 0 18px;">${tmplPitch}</p>
+            <p style="margin:0 0 20px;">We help businesses with these types of projects and would be happy to have a brief introductory conversation.</p>
+            
+            <!-- Callout Highlight -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0;">
+              <tr>
+                <td style="background-color:#f0f9ff; border-left:4px solid ${tmplAccentColor}; border-radius:0 8px 8px 0; padding:16px 20px;">
+                  <p style="margin:0; font-size:15px; line-height:1.5; color:#0369a1; font-weight:600;">
+                    💡 Would it be worth a quick 5-minute chat this week?
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Signature -->
+            <p style="margin:28px 0 0; font-size:15px; line-height:1.6;">
+              Best regards,<br>
+              <strong style="color:#0f172a; font-size:16px;">${tmplSenderName}</strong><br>
+              <span style="color:#64748b; font-size:13px;">${tmplSenderTitle} • ${tmplCompanyName}</span>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:20px 32px; background-color:#f8fafc; border-top:1px solid #f1f5f9;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="font-size:13px; color:#64748b; line-height:1.8;">
+                  ${tmplPhone ? `📞 <strong>Direct:</strong> <a href="tel:${tmplPhone.replace(/[^0-9+]/g, "")}" style="color:${tmplAccentColor}; text-decoration:none; font-weight:600;">${tmplPhone}</a><br>` : ""}
+                  ${tmplWebsite ? `🌐 <strong>Website:</strong> <a href="${tmplWebsite}" target="_blank" style="color:${tmplAccentColor}; text-decoration:none; font-weight:600;">${tmplWebsite.replace(/^https?:\/\//, "")}</a>` : ""}
+                </td>
+              </tr>
+              <tr>
+                <td style="padding-top:12px; font-size:11px; color:#94a3b8; border-top:1px solid #e2e8f0; margin-top:10px;">
+                  You received this note from ${tmplCompanyName}. Reply with &quot;Unsubscribe&quot; to opt out of future messages.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>`;
+  };
+
+  const handleApplyCustomTemplate = () => {
+    const generatedHtml = generateCustomTemplateHtml();
+    handleStepChange(targetStepIndex, "bodyHtml", generatedHtml);
+    setShowTemplateModal(false);
+  };
+
   if (loading) {
     return (
       <div className="clean-card p-12 text-center text-xs text-slate-500 rounded-xl">
@@ -248,7 +374,7 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
               setShowDispatchModal(true);
               setDispatchResults(null);
             }}
-            className="btn-primary text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center gap-1.5"
+            className="btn-primary text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center gap-1.5 font-bold"
           >
             <Zap className="w-3.5 h-3.5 fill-current" />
             <span>Send Outbound Batch</span>
@@ -324,10 +450,9 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-sky-600 shrink-0" />
               <span>
-                <strong>Dynamic Personalization Tags:</strong> <code>&#123;&#123;name&#125;&#125;</code>,{" "}
-                <code>&#123;&#123;first_name&#125;&#125;</code>, <code>&#123;&#123;company&#125;&#125;</code>,{" "}
-                <code>&#123;&#123;city&#125;&#125;</code>, <code>&#123;&#123;job_title&#125;&#125;</code>,{" "}
-                <code>&#123;&#123;first_name | fallback:&quot;there&quot;&#125;&#125;</code>
+                <strong>Dynamic Personalization Tags:</strong> <code>&#123;&#123;First Name&#125;&#125;</code>,{" "}
+                <code>&#123;&#123;Company Name&#125;&#125;</code>, <code>&#123;&#123;city&#125;&#125;</code>,{" "}
+                <code>&#123;&#123;First Name | fallback:&quot;there&quot;&#125;&#125;</code>
               </span>
             </div>
             <span className="text-[10px] bg-sky-100 text-sky-800 px-2 py-0.5 rounded font-semibold border border-sky-300">
@@ -366,15 +491,30 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
                     </div>
                   </div>
 
-                  {steps.length > 1 && (
+                  <div className="flex items-center gap-2">
+                    {/* CUSTOMIZE TEMPLATE BUTTON */}
                     <button
-                      onClick={() => handleRemoveStep(idx)}
-                      className="text-slate-400 hover:text-red-600 transition p-1"
-                      title="Remove Step"
+                      type="button"
+                      onClick={() => {
+                        setTargetStepIndex(idx);
+                        setShowTemplateModal(true);
+                      }}
+                      className="px-3 py-1.5 bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Palette className="w-3.5 h-3.5 text-sky-600" />
+                      <span>Design / Customize Template</span>
                     </button>
-                  )}
+
+                    {steps.length > 1 && (
+                      <button
+                        onClick={() => handleRemoveStep(idx)}
+                        className="text-slate-400 hover:text-red-600 transition p-1"
+                        title="Remove Step"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Subject Line */}
@@ -384,20 +524,23 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
                     type="text"
                     value={step.subject || ""}
                     onChange={(e) => handleStepChange(idx, "subject", e.target.value)}
-                    placeholder="e.g. Modernizing mobile intake for {{name}}"
+                    placeholder="e.g. Quick question for {{Company Name}}"
                     className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-sky-600 focus:ring-1 focus:ring-sky-600 shadow-2xs"
                   />
                 </div>
 
                 {/* Email Body Content */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Email Body (HTML / Plaintext)</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">Email Body (HTML / Visual Template)</label>
+                    <span className="text-[11px] text-slate-400">Use Template Designer above for instant visual styling</span>
+                  </div>
                   <textarea
-                    rows={6}
+                    rows={8}
                     value={step.bodyHtml || ""}
                     onChange={(e) => handleStepChange(idx, "bodyHtml", e.target.value)}
                     className="w-full font-mono text-xs px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:border-sky-600 focus:ring-1 focus:ring-sky-600 shadow-2xs leading-relaxed"
-                    placeholder="<p>Hi {{first_name | fallback:'there'}},</p><p>I noticed...</p>"
+                    placeholder="HTML email template goes here..."
                   />
                 </div>
               </div>
@@ -439,6 +582,225 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
               <span className="text-xs text-slate-500 font-medium">Replies Received</span>
               <div className="text-2xl font-bold text-indigo-600 mt-1">{analytics?.repliedCount || 0}</div>
               <span className="text-[11px] text-indigo-600 font-semibold">{analytics?.replyRate || 0}% reply rate</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: TEMPLATE DESIGNER & CUSTOMIZER */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="clean-card rounded-2xl max-w-4xl w-full border border-slate-200 bg-white shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-2.5">
+                <Palette className="w-5 h-5 text-sky-600" />
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">Email Template Designer</h2>
+                  <p className="text-xs text-slate-500">Customize brand colors, logos, signature, and layout with live preview.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTemplateModal(false)}
+                className="text-slate-400 hover:text-slate-700 text-lg p-1 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body: Controls & Preview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 overflow-y-auto flex-1">
+              {/* Left Column: Customization Controls */}
+              <div className="space-y-4 text-xs">
+                {/* Header Theme Color */}
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1.5">Header Banner Color</label>
+                  <div className="flex items-center gap-2">
+                    {[
+                      { name: "Executive Navy", val: "#0f172a" },
+                      { name: "Royal Blue", val: "#1e40af" },
+                      { name: "Sky Blue", val: "#0284c7" },
+                      { name: "Emerald", val: "#065f46" },
+                      { name: "Violet", val: "#581c87" },
+                    ].map((c) => (
+                      <button
+                        key={c.val}
+                        type="button"
+                        onClick={() => setTmplThemeColor(c.val)}
+                        className={`w-8 h-8 rounded-full border-2 transition flex items-center justify-center ${
+                          tmplThemeColor === c.val ? "border-sky-500 scale-110 shadow-sm" : "border-transparent"
+                        }`}
+                        style={{ backgroundColor: c.val }}
+                        title={c.name}
+                      >
+                        {tmplThemeColor === c.val && <Check className="w-4 h-4 text-white" />}
+                      </button>
+                    ))}
+                    <input
+                      type="color"
+                      value={tmplThemeColor}
+                      onChange={(e) => setTmplThemeColor(e.target.value)}
+                      className="w-8 h-8 rounded cursor-pointer border border-slate-300"
+                      title="Custom Color"
+                    />
+                  </div>
+                </div>
+
+                {/* Accent Color */}
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1.5">Accent & Link Color</label>
+                  <div className="flex items-center gap-2">
+                    {[
+                      { val: "#0284c7" },
+                      { val: "#2563eb" },
+                      { val: "#059669" },
+                      { val: "#7c3aed" },
+                      { val: "#d97706" },
+                    ].map((c) => (
+                      <button
+                        key={c.val}
+                        type="button"
+                        onClick={() => setTmplAccentColor(c.val)}
+                        className={`w-7 h-7 rounded-full border-2 transition flex items-center justify-center ${
+                          tmplAccentColor === c.val ? "border-slate-800 scale-110" : "border-transparent"
+                        }`}
+                        style={{ backgroundColor: c.val }}
+                      >
+                        {tmplAccentColor === c.val && <Check className="w-3.5 h-3.5 text-white" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Company Name & Tagline */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Company / Brand Name</label>
+                    <input
+                      type="text"
+                      value={tmplCompanyName}
+                      onChange={(e) => setTmplCompanyName(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Logo Image URL (Optional)</label>
+                    <input
+                      type="url"
+                      value={tmplLogoUrl}
+                      onChange={(e) => setTmplLogoUrl(e.target.value)}
+                      placeholder="https://.../logo.png"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Tagline */}
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Header Subtitle / Tagline</label>
+                  <input
+                    type="text"
+                    value={tmplTagline}
+                    onChange={(e) => setTmplTagline(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
+                  />
+                </div>
+
+                {/* Core Question / Pitch */}
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Core Proposition / Question</label>
+                  <textarea
+                    rows={2}
+                    value={tmplPitch}
+                    onChange={(e) => setTmplPitch(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs leading-relaxed"
+                  />
+                </div>
+
+                {/* Sender Details */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Sender Name</label>
+                    <input
+                      type="text"
+                      value={tmplSenderName}
+                      onChange={(e) => setTmplSenderName(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Sender Title</label>
+                    <input
+                      type="text"
+                      value={tmplSenderTitle}
+                      onChange={(e) => setTmplSenderTitle(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Contact Phone</label>
+                    <input
+                      type="text"
+                      value={tmplPhone}
+                      onChange={(e) => setTmplPhone(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Website URL</label>
+                    <input
+                      type="text"
+                      value={tmplWebsite}
+                      onChange={(e) => setTmplWebsite(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Live Email Preview */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Live Preview</span>
+                  <span className="text-[11px] text-slate-400">Desktop & Mobile Responsive</span>
+                </div>
+                <div className="border border-slate-200 rounded-xl p-3 bg-slate-100 max-h-[460px] overflow-y-auto shadow-inner">
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: generateCustomTemplateHtml()
+                        .replace("{{First Name | fallback:\"there\"}}", "Sarah")
+                        .replace("{{Company Name | fallback:\"your company\"}}", "Acme Dental Partners"),
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <span className="text-xs text-slate-500">
+                Applying will insert this clean HTML layout into Step {targetStepIndex + 1}.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTemplateModal(false)}
+                  className="btn-secondary text-xs py-2 px-3.5"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyCustomTemplate}
+                  className="btn-primary text-xs py-2 px-5 bg-sky-600 hover:bg-sky-700 text-white font-bold flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Apply Template to Step {targetStepIndex + 1}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

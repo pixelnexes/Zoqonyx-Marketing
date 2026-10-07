@@ -16750,6 +16750,32 @@
   ],
   "sentEmails": [
     {
+      "id": "sent_1791337870181",
+      "campaignId": "cmp_1791332886496",
+      "campaignName": "dentist campaign",
+      "mailboxId": "mbx_1791331249821",
+      "fromEmail": "thomas@newixtechsolutions.com",
+      "toEmail": "info@newixtechsolutions.com",
+      "leadName": "Test Lead",
+      "subject": "Quick question about  Test Lead",
+      "status": "SENT",
+      "messageId": "<74382c25-3595-5c35-1e7e-e6fddedefe43@newixtechsolutions.com>",
+      "sentAt": "2026-10-07T01:51:10.181Z"
+    },
+    {
+      "id": "sent_1791337608609",
+      "campaignId": "cmp_1791332886496",
+      "campaignName": "dentist campaign",
+      "mailboxId": "mbx_1791331249821",
+      "fromEmail": "thomas@newixtechsolutions.com",
+      "toEmail": "info@newixtechsolutions.com",
+      "leadName": "Test Lead",
+      "subject": "Quick question about  Test Lead",
+      "status": "SENT",
+      "messageId": "<9278389f-398b-a66c-981e-3f8047a08541@newixtechsolutions.com>",
+      "sentAt": "2026-10-07T01:46:48.609Z"
+    },
+    {
       "id": "sent_1791337407619_gt2",
       "campaignId": "cmp_1791332886496",
       "campaignName": "dentist campaign",

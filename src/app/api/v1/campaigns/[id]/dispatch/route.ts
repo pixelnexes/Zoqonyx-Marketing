@@ -77,18 +77,22 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
       if (hasLiveSmtp && provider) {
         try {
-          const res = await provider.sendEmail(mailbox.credentials as any, {
-            to: lead.email,
-            fromName: mailbox.fromName || "Campaign Outreach",
-            fromEmail: mailbox.email,
-            subject: renderedSubject,
-            htmlBody: `
+          const finalHtml = renderedBody.includes("<html")
+            ? renderedBody
+            : `
               ${renderedBody}
               <br/><br/>
               <p style="font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 10px;">
                 You received this note from ${mailbox.fromName} (${mailbox.email}). To unsubscribe, click <a href="#">here</a>.
               </p>
-            `,
+            `;
+
+          const res = await provider.sendEmail(mailbox.credentials as any, {
+            to: lead.email,
+            fromName: mailbox.fromName || "Campaign Outreach",
+            fromEmail: mailbox.email,
+            subject: renderedSubject,
+            htmlBody: finalHtml,
           });
           if (!res.success) {
             sentStatus = "FAILED";

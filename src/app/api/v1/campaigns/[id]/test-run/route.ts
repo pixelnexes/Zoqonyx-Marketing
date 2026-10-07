@@ -48,16 +48,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           to: recipientEmail,
           fromName: mailbox.fromName || "Campaign Outreach",
           fromEmail: mailbox.email,
-          subject: `[LIVE TEST] ${renderedSubject}`,
-          htmlBody: `
-            <div style="font-family: sans-serif; padding: 20px; border-left: 4px solid #0284c7; background: #f8fafc; margin-bottom: 20px;">
-              <strong style="color: #0284c7;">⚡ Zoqonyx Cold Outreach Test Dispatch</strong><br/>
-              <span style="font-size: 13px; color: #64748b;">Sender: ${mailbox.email} | Campaign: ${campaign?.name || "Outbound"}</span>
-            </div>
-            ${renderedBody}
-            <hr style="margin-top: 30px; border: 0; border-top: 1px solid #e2e8f0;" />
-            <p style="font-size: 12px; color: #94a3b8;">Sent via ZOQONYX EMAIL MARKETING • Powered by NAWIX TECH SOLUTION</p>
-          `,
+          subject: renderedSubject,
+          htmlBody: renderedBody,
         });
 
         dbStore.recordSentEmail({
