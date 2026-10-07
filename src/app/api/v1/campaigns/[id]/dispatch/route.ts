@@ -3,6 +3,7 @@ import { getTenantContext } from "@/lib/tenancy";
 import { dbStore, StoredSentEmail } from "@/lib/db-store";
 import { SmtpImapProvider } from "@/lib/providers/smtp-imap-provider";
 import { renderTemplate } from "@/lib/template-renderer";
+import { validateEmailDomain } from "@/lib/email-validator";
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -75,7 +76,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       let messageId = `<disp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}@${mailbox?.email?.split("@")[1] || "zoqonyx.com"}>`;
       let errorMsg: string | undefined = undefined;
 
-      if (hasLiveSmtp && provider) {
+      // 1. Pre-flight DNS MX verification to avoid dead domain bounces
+      const domainCheck = await validateEmailDomain(lead.email);
+      if (!domainCheck.valid) {
+        sentStatus = "FAILED";
+        errorMsg = `[Pre-Send Protection] ${domainCheck.reason}`;
+        failedCount++;
+      } else if (hasLiveSmtp && provider) {
         try {
           const finalHtml = renderedBody.includes("<html")
             ? renderedBody

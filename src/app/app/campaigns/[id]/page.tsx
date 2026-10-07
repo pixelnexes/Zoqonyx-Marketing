@@ -28,6 +28,11 @@ import {
   Check,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import {
+  EMAIL_TEMPLATE_PRESETS,
+  EmailTemplateConfig,
+  generateEmailHtml,
+} from "@/lib/email-template-presets";
 
 export default function CampaignDetailPage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -49,21 +54,38 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
   const [dispatching, setDispatching] = useState(false);
   const [dispatchResults, setDispatchResults] = useState<any>(null);
 
-  // Template Designer Modal
+  // Template Designer Modal & Presets
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [targetStepIndex, setTargetStepIndex] = useState<number>(0);
-  const [tmplThemeColor, setTmplThemeColor] = useState("#0f172a");
-  const [tmplAccentColor, setTmplAccentColor] = useState("#0284c7");
+  const [selectedPresetId, setSelectedPresetId] = useState<string>("software_house_outsourcing");
+  const [tmplSubject, setTmplSubject] = useState(EMAIL_TEMPLATE_PRESETS[0].subject);
+  const [tmplHeadline, setTmplHeadline] = useState(EMAIL_TEMPLATE_PRESETS[0].headline);
+  const [tmplThemeColor, setTmplThemeColor] = useState(EMAIL_TEMPLATE_PRESETS[0].headerColor);
+  const [tmplAccentColor, setTmplAccentColor] = useState(EMAIL_TEMPLATE_PRESETS[0].accentColor);
   const [tmplCompanyName, setTmplCompanyName] = useState("Newix Tech Solutions");
-  const [tmplTagline, setTmplTagline] = useState("Custom Software • AI Solutions • Web & App Development");
   const [tmplLogoUrl, setTmplLogoUrl] = useState("");
   const [tmplSenderName, setTmplSenderName] = useState("Thomas");
-  const [tmplSenderTitle, setTmplSenderTitle] = useState("Outreach Specialist");
+  const [tmplSenderTitle, setTmplSenderTitle] = useState("Head of Client Partnerships");
   const [tmplPhone, setTmplPhone] = useState("+1 (937) 462-0997");
   const [tmplWebsite, setTmplWebsite] = useState("https://newixtechsolutions.com");
-  const [tmplPitch, setTmplPitch] = useState(
-    "Are you currently planning any website, app, AI, automation, or software improvements for your business?"
-  );
+  const [tmplPitch, setTmplPitch] = useState(EMAIL_TEMPLATE_PRESETS[0].pitchParagraph);
+  const [tmplBullets, setTmplBullets] = useState<string[]>(EMAIL_TEMPLATE_PRESETS[0].bulletPoints);
+  const [tmplCtaText, setTmplCtaText] = useState(EMAIL_TEMPLATE_PRESETS[0].ctaText);
+  const [tmplCtaLink, setTmplCtaLink] = useState(EMAIL_TEMPLATE_PRESETS[0].ctaLink);
+
+  const applyPreset = (presetId: string) => {
+    setSelectedPresetId(presetId);
+    const p = EMAIL_TEMPLATE_PRESETS.find((x) => x.id === presetId) || EMAIL_TEMPLATE_PRESETS[0];
+    setTmplSubject(p.subject);
+    setTmplHeadline(p.headline);
+    setTmplThemeColor(p.headerColor);
+    setTmplAccentColor(p.accentColor);
+    setTmplPitch(p.pitchParagraph);
+    setTmplBullets([...p.bulletPoints]);
+    setTmplCtaText(p.ctaText);
+    setTmplCtaLink(p.ctaLink);
+    setTmplSenderTitle(p.senderTitle);
+  };
 
   const fetchCampaign = () => {
     setLoading(true);
@@ -243,87 +265,43 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
       setDispatchResults(data);
       toast.success("Batch Dispatched", `Successfully delivered ${data.successCount} outbound emails.`);
       fetchCampaign();
-    } catch (err: any) {
-      toast.error("Dispatch Error", err.message);
     } finally {
       setDispatching(false);
     }
   };
 
   const generateCustomTemplateHtml = () => {
-    const logoBlock = tmplLogoUrl.trim()
-      ? `<img src="${tmplLogoUrl.trim()}" alt="${tmplCompanyName}" style="max-height:48px; max-width:200px; display:inline-block; margin-bottom:8px;" />`
-      : `<div style="font-size:22px; font-weight:bold; color:#ffffff; letter-spacing:-0.5px;">${tmplCompanyName}</div>`;
-
-    return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f8fafc; padding:30px 15px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-  <tr>
-    <td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background-color:#ffffff; border-radius:12px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
-        
-        <!-- Header -->
-        <tr>
-          <td style="padding:24px 32px; background-color:${tmplThemeColor}; text-align:center;">
-            ${logoBlock}
-            <div style="font-size:12px; color:#cbd5e1; margin-top:4px; letter-spacing:0.3px;">${tmplTagline}</div>
-          </td>
-        </tr>
-
-        <!-- Content -->
-        <tr>
-          <td style="padding:36px 32px; color:#334155; font-size:15px; line-height:1.6;">
-            <p style="margin:0 0 16px;">Hi <strong>{{First Name | fallback:"there"}}</strong>,</p>
-            <p style="margin:0 0 16px;">I came across <strong>{{Company Name | fallback:"your company"}}</strong> and wanted to ask something quickly.</p>
-            <p style="margin:0 0 18px;">${tmplPitch}</p>
-            <p style="margin:0 0 20px;">We help businesses with these types of projects and would be happy to have a brief introductory conversation.</p>
-            
-            <!-- Callout Highlight -->
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0;">
-              <tr>
-                <td style="background-color:#f0f9ff; border-left:4px solid ${tmplAccentColor}; border-radius:0 8px 8px 0; padding:16px 20px;">
-                  <p style="margin:0; font-size:15px; line-height:1.5; color:#0369a1; font-weight:600;">
-                    💡 Would it be worth a quick 5-minute chat this week?
-                  </p>
-                </td>
-              </tr>
-            </table>
-
-            <!-- Signature -->
-            <p style="margin:28px 0 0; font-size:15px; line-height:1.6;">
-              Best regards,<br>
-              <strong style="color:#0f172a; font-size:16px;">${tmplSenderName}</strong><br>
-              <span style="color:#64748b; font-size:13px;">${tmplSenderTitle} • ${tmplCompanyName}</span>
-            </p>
-          </td>
-        </tr>
-
-        <!-- Footer -->
-        <tr>
-          <td style="padding:20px 32px; background-color:#f8fafc; border-top:1px solid #f1f5f9;">
-            <table width="100%" cellpadding="0" cellspacing="0" border="0">
-              <tr>
-                <td style="font-size:13px; color:#64748b; line-height:1.8;">
-                  ${tmplPhone ? `📞 <strong>Direct:</strong> <a href="tel:${tmplPhone.replace(/[^0-9+]/g, "")}" style="color:${tmplAccentColor}; text-decoration:none; font-weight:600;">${tmplPhone}</a><br>` : ""}
-                  ${tmplWebsite ? `🌐 <strong>Website:</strong> <a href="${tmplWebsite}" target="_blank" style="color:${tmplAccentColor}; text-decoration:none; font-weight:600;">${tmplWebsite.replace(/^https?:\/\//, "")}</a>` : ""}
-                </td>
-              </tr>
-              <tr>
-                <td style="padding-top:12px; font-size:11px; color:#94a3b8; border-top:1px solid #e2e8f0; margin-top:10px;">
-                  You received this note from ${tmplCompanyName}. Reply with &quot;Unsubscribe&quot; to opt out of future messages.
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-      </table>
-    </td>
-  </tr>
-</table>`;
+    return generateEmailHtml({
+      id: selectedPresetId,
+      name: "Custom Template",
+      category: "software_house_outsourcing",
+      subject: tmplSubject,
+      logoUrl: tmplLogoUrl.trim(),
+      headerColor: tmplThemeColor,
+      accentColor: tmplAccentColor,
+      senderName: tmplSenderName,
+      senderTitle: tmplSenderTitle,
+      senderPhone: tmplPhone,
+      companyName: tmplCompanyName,
+      companyWebsite: tmplWebsite,
+      headline: tmplHeadline,
+      pitchParagraph: tmplPitch,
+      bulletPoints: tmplBullets,
+      ctaText: tmplCtaText,
+      ctaLink: tmplCtaLink,
+    });
   };
 
   const handleApplyCustomTemplate = () => {
     const generatedHtml = generateCustomTemplateHtml();
     handleStepChange(targetStepIndex, "bodyHtml", generatedHtml);
+    if (tmplSubject) {
+      handleStepChange(targetStepIndex, "subject", tmplSubject);
+    }
+    toast.success(
+      "Template Applied",
+      `Step ${targetStepIndex + 1} updated with "${selectedPresetId.replace(/_/g, " ")}" layout.`
+    );
     setShowTemplateModal(false);
   };
 
@@ -597,15 +575,17 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
 
       {/* MODAL: TEMPLATE DESIGNER & CUSTOMIZER */}
       {showTemplateModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="clean-card rounded-2xl max-w-4xl w-full border border-slate-200 bg-white shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="clean-card rounded-2xl max-w-5xl w-full border border-slate-200 bg-white shadow-2xl overflow-hidden max-h-[94vh] flex flex-col">
             {/* Modal Header */}
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
               <div className="flex items-center gap-2.5">
                 <Palette className="w-5 h-5 text-sky-600" />
                 <div>
-                  <h2 className="text-base font-bold text-slate-900">Email Template Designer</h2>
-                  <p className="text-xs text-slate-500">Customize brand colors, logos, signature, and layout with live preview.</p>
+                  <h2 className="text-base font-bold text-slate-900">Email Template Presets & Visual Designer</h2>
+                  <p className="text-xs text-slate-500">
+                    Select a high-converting agency pitch preset or customize logos, colors, rates, and copy with live preview.
+                  </p>
                 </div>
               </div>
               <button
@@ -616,71 +596,115 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
               </button>
             </div>
 
+            {/* PRESET SELECTOR BAR */}
+            <div className="p-4 bg-slate-100/70 border-b border-slate-200">
+              <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2">
+                1. Choose Pre-Built Campaign Preset:
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {EMAIL_TEMPLATE_PRESETS.map((preset) => {
+                  const isSelected = selectedPresetId === preset.id;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => applyPreset(preset.id)}
+                      className={`text-left p-3 rounded-xl border transition-all relative ${
+                        isSelected
+                          ? "bg-white border-sky-500 ring-2 ring-sky-500/20 shadow-sm"
+                          : "bg-white/80 border-slate-200 hover:border-slate-300 hover:bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-900 truncate pr-2">
+                          {preset.category === "software_house_outsourcing"
+                            ? "💻 Software Outsourcing ($12/hr)"
+                            : preset.category === "b2b_business"
+                            ? "🏢 B2B Growth & Audit"
+                            : "📱 Custom App & Web Dev"}
+                        </span>
+                        {isSelected && <CheckCircle2 className="w-4 h-4 text-sky-600 shrink-0" />}
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                        {preset.headline}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Modal Body: Controls & Preview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 overflow-y-auto flex-1">
-              {/* Left Column: Customization Controls */}
-              <div className="space-y-4 text-xs">
-                {/* Header Theme Color */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 p-5 overflow-y-auto flex-1">
+              {/* Left Column: Customization Controls (7 cols) */}
+              <div className="md:col-span-6 space-y-4 text-xs">
+                {/* Subject Line */}
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1.5">Header Banner Color</label>
-                  <div className="flex items-center gap-2">
-                    {[
-                      { name: "Executive Navy", val: "#0f172a" },
-                      { name: "Royal Blue", val: "#1e40af" },
-                      { name: "Sky Blue", val: "#0284c7" },
-                      { name: "Emerald", val: "#065f46" },
-                      { name: "Violet", val: "#581c87" },
-                    ].map((c) => (
-                      <button
-                        key={c.val}
-                        type="button"
-                        onClick={() => setTmplThemeColor(c.val)}
-                        className={`w-8 h-8 rounded-full border-2 transition flex items-center justify-center ${
-                          tmplThemeColor === c.val ? "border-sky-500 scale-110 shadow-sm" : "border-transparent"
-                        }`}
-                        style={{ backgroundColor: c.val }}
-                        title={c.name}
-                      >
-                        {tmplThemeColor === c.val && <Check className="w-4 h-4 text-white" />}
-                      </button>
-                    ))}
-                    <input
-                      type="color"
-                      value={tmplThemeColor}
-                      onChange={(e) => setTmplThemeColor(e.target.value)}
-                      className="w-8 h-8 rounded cursor-pointer border border-slate-300"
-                      title="Custom Color"
-                    />
+                  <label className="block font-semibold text-slate-700 mb-1">Subject Line</label>
+                  <input
+                    type="text"
+                    value={tmplSubject}
+                    onChange={(e) => setTmplSubject(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-1 focus:ring-sky-600"
+                  />
+                </div>
+
+                {/* Theme & Accent Colors */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Header Theme Color</label>
+                    <div className="flex items-center gap-1.5">
+                      {["#0f172a", "#1e40af", "#0284c7", "#065f46", "#581c87"].map((val) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setTmplThemeColor(val)}
+                          className={`w-6 h-6 rounded-full border transition flex items-center justify-center ${
+                            tmplThemeColor === val ? "border-slate-900 scale-110 shadow-xs" : "border-transparent"
+                          }`}
+                          style={{ backgroundColor: val }}
+                        >
+                          {tmplThemeColor === val && <Check className="w-3 h-3 text-white" />}
+                        </button>
+                      ))}
+                      <input
+                        type="color"
+                        value={tmplThemeColor}
+                        onChange={(e) => setTmplThemeColor(e.target.value)}
+                        className="w-6 h-6 rounded cursor-pointer border border-slate-300"
+                        title="Custom Color"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">CTA Accent Color</label>
+                    <div className="flex items-center gap-1.5">
+                      {["#0284c7", "#2563eb", "#059669", "#7c3aed", "#ea580c"].map((val) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setTmplAccentColor(val)}
+                          className={`w-6 h-6 rounded-full border transition flex items-center justify-center ${
+                            tmplAccentColor === val ? "border-slate-900 scale-110 shadow-xs" : "border-transparent"
+                          }`}
+                          style={{ backgroundColor: val }}
+                        >
+                          {tmplAccentColor === val && <Check className="w-3 h-3 text-white" />}
+                        </button>
+                      ))}
+                      <input
+                        type="color"
+                        value={tmplAccentColor}
+                        onChange={(e) => setTmplAccentColor(e.target.value)}
+                        className="w-6 h-6 rounded cursor-pointer border border-slate-300"
+                        title="Custom Color"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Accent Color */}
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1.5">Accent & Link Color</label>
-                  <div className="flex items-center gap-2">
-                    {[
-                      { val: "#0284c7" },
-                      { val: "#2563eb" },
-                      { val: "#059669" },
-                      { val: "#7c3aed" },
-                      { val: "#d97706" },
-                    ].map((c) => (
-                      <button
-                        key={c.val}
-                        type="button"
-                        onClick={() => setTmplAccentColor(c.val)}
-                        className={`w-7 h-7 rounded-full border-2 transition flex items-center justify-center ${
-                          tmplAccentColor === c.val ? "border-slate-800 scale-110" : "border-transparent"
-                        }`}
-                        style={{ backgroundColor: c.val }}
-                      >
-                        {tmplAccentColor === c.val && <Check className="w-3.5 h-3.5 text-white" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Company Name & Tagline */}
+                {/* Company Name & Logo URL */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Company / Brand Name</label>
@@ -703,22 +727,22 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
                   </div>
                 </div>
 
-                {/* Tagline */}
+                {/* Main Headline */}
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Header Subtitle / Tagline</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Main Headline</label>
                   <input
                     type="text"
-                    value={tmplTagline}
-                    onChange={(e) => setTmplTagline(e.target.value)}
+                    value={tmplHeadline}
+                    onChange={(e) => setTmplHeadline(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
                   />
                 </div>
 
-                {/* Core Question / Pitch */}
+                {/* Pitch Paragraph */}
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Core Proposition / Question</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Pitch Copy / Value Proposition</label>
                   <textarea
-                    rows={2}
+                    rows={3}
                     value={tmplPitch}
                     onChange={(e) => setTmplPitch(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs leading-relaxed"
@@ -749,7 +773,7 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Contact Phone</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Direct Phone</label>
                     <input
                       type="text"
                       value={tmplPhone}
@@ -769,18 +793,19 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
                 </div>
               </div>
 
-              {/* Right Column: Live Email Preview */}
-              <div className="space-y-2">
+              {/* Right Column: Live Email Preview (5 cols) */}
+              <div className="md:col-span-6 space-y-2 flex flex-col">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Live Preview</span>
-                  <span className="text-[11px] text-slate-400">Desktop & Mobile Responsive</span>
+                  <span className="text-[11px] text-slate-400">Hostinger / Gmail / Outlook Responsive</span>
                 </div>
-                <div className="border border-slate-200 rounded-xl p-3 bg-slate-100 max-h-[460px] overflow-y-auto shadow-inner">
+                <div className="border border-slate-200 rounded-xl p-3 bg-slate-100 flex-1 max-h-[500px] overflow-y-auto shadow-inner">
                   <div
                     dangerouslySetInnerHTML={{
                       __html: generateCustomTemplateHtml()
-                        .replace("{{First Name | fallback:\"there\"}}", "Sarah")
-                        .replace("{{Company Name | fallback:\"your company\"}}", "Acme Dental Partners"),
+                        .replace("{{First Name}}", "John")
+                        .replace("{{Company}}", "DevCraft Studios")
+                        .replace("{{Company Name}}", "DevCraft Studios"),
                     }}
                   />
                 </div>
@@ -790,7 +815,7 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
             {/* Modal Footer */}
             <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/70">
               <span className="text-xs text-slate-500">
-                Applying will insert this clean HTML layout into Step {targetStepIndex + 1}.
+                Applying will insert this clean HTML template & subject into <strong>Step {targetStepIndex + 1}</strong>.
               </span>
               <div className="flex items-center gap-2">
                 <button

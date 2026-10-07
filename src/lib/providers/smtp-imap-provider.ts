@@ -75,14 +75,21 @@ export class SmtpImapProvider implements IEmailProvider {
         },
       });
 
-      const mailOptions = {
-        from: `"${options.fromName.replace(/"/g, "")}" <${options.fromEmail}>`,
+      const mailOptions: any = {
+        from: `"${options.fromName.replace(/"/g, "")}" <${options.fromEmail || credentials.smtpUser}>`,
         to: options.to,
-        replyTo: options.replyTo || options.fromEmail,
+        replyTo: options.replyTo || options.fromEmail || credentials.smtpUser,
+        envelope: {
+          from: credentials.smtpUser,
+          to: options.to,
+        },
         subject: options.subject,
         html: options.htmlBody,
         text: options.textBody || options.htmlBody.replace(/<[^>]*>/g, ""),
-        headers: options.headers || {},
+        headers: {
+          "X-Mailer": "Zoqonyx Outreach Engine",
+          ...(options.headers || {}),
+        },
       };
 
       const info = await transporter.sendMail(mailOptions);
