@@ -20,6 +20,8 @@ import {
   Save,
   ShieldCheck,
   Code2,
+  RefreshCw,
+  Zap,
 } from "lucide-react";
 
 export default function CampaignDetailPage({ params }: { params: { id: string } }) {
@@ -31,10 +33,16 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
   const [steps, setSteps] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"sequence" | "analytics">("sequence");
 
-  // Test run modal
+  // Test preview modal
   const [showTestModal, setShowTestModal] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [sendingTest, setSendingTest] = useState(false);
+
+  // Live batch dispatch modal
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [dispatchLimit, setDispatchLimit] = useState(25);
+  const [dispatching, setDispatching] = useState(false);
+  const [dispatchResults, setDispatchResults] = useState<any>(null);
 
   const fetchCampaign = () => {
     setLoading(true);
@@ -51,8 +59,8 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
                 stepNumber: 1,
                 stepType: "EMAIL",
                 waitDays: 0,
-                subject: "Quick thought regarding {{name | fallback:'your business'}}",
-                bodyHtml: "<p>Hi {{first_name | fallback:'there'}},</p><p>I noticed {{name}} has great presence in {{city | fallback:'your market'}}.</p><p>Would you be open to a 5-minute chat this week?</p><p>Best regards,<br/>Alex Vance</p>",
+                subject: "Quick question regarding {{name | fallback:'your business'}}",
+                bodyHtml: "<p>Hi {{first_name | fallback:'there'}},</p><p>I noticed {{name}} has a strong market reputation in {{city | fallback:'your city'}}.</p><p>We help businesses in your space streamline outbound client acquisition with guaranteed deliverability.</p><p>Would you be open to a 5-minute conversation this week?</p><p>Best regards,<br/>Alex Vance</p>",
               },
               {
                 stepNumber: 2,
@@ -118,7 +126,7 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save sequence");
 
-      alert("Sequence steps saved successfully!");
+      alert("Sequence cadence saved successfully!");
       fetchCampaign();
     } catch (err: any) {
       alert(err.message);
@@ -154,13 +162,34 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Test send failed");
 
-      alert(`Preview test email successfully sent to ${testEmail}!`);
+      alert(`Live preview test email dispatched to ${testEmail}! Check your inbox.`);
       setShowTestModal(false);
       setTestEmail("");
+      fetchCampaign();
     } catch (err: any) {
       alert(`Error: ${err.message}`);
     } finally {
       setSendingTest(false);
+    }
+  };
+
+  const handleRunDispatch = async () => {
+    setDispatching(true);
+    setDispatchResults(null);
+    try {
+      const res = await fetch(`/api/v1/campaigns/${id}/dispatch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limit: dispatchLimit }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Batch dispatch failed");
+      setDispatchResults(data);
+      fetchCampaign();
+    } catch (err: any) {
+      alert(`Dispatch error: ${err.message}`);
+    } finally {
+      setDispatching(false);
     }
   };
 
@@ -207,12 +236,24 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
           </div>
           <p className="text-xs text-slate-500 mt-1">
             Sender: <strong className="text-slate-800">{campaign.mailbox?.email || "Outreach Mailbox"}</strong> • Daily Pace Limit:{" "}
-            <strong className="text-slate-800">{campaign.dailyLimit} emails/day</strong> • Audience Tag:{" "}
+            <strong className="text-slate-800">{campaign.dailyLimit} emails/day</strong> • Audience Target:{" "}
             <strong className="text-slate-800">{campaign.targetListTag || "All Leads"}</strong>
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          {/* LIVE DISPATCH BUTTON */}
+          <button
+            onClick={() => {
+              setShowDispatchModal(true);
+              setDispatchResults(null);
+            }}
+            className="btn-primary text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center gap-1.5"
+          >
+            <Zap className="w-3.5 h-3.5 fill-current" />
+            <span>Send Outbound Batch</span>
+          </button>
+
           <button
             onClick={() => setShowTestModal(true)}
             className="btn-secondary text-xs"
@@ -238,11 +279,11 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
           >
             {campaign.status === "RUNNING" ? (
               <>
-                <Pause className="w-4 h-4" /> Pause Campaign
+                <Pause className="w-4 h-4" /> Pause
               </>
             ) : (
               <>
-                <Play className="w-4 h-4" /> Launch Campaign
+                <Play className="w-4 h-4" /> Launch
               </>
             )}
           </button>
@@ -262,7 +303,10 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
           Sequence Cadence ({steps.length} Steps)
         </button>
         <button
-          onClick={() => setActiveTab("analytics")}
+          onClick={() => {
+            setActiveTab("analytics");
+            fetchCampaign();
+          }}
           className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
             activeTab === "analytics"
               ? "bg-slate-900 text-white shadow-xs"
@@ -281,7 +325,8 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
               <Sparkles className="w-4 h-4 text-sky-600 shrink-0" />
               <span>
                 <strong>Dynamic Personalization Tags:</strong> <code>&#123;&#123;name&#125;&#125;</code>,{" "}
-                <code>&#123;&#123;first_name&#125;&#125;</code>, <code>&#123;&#123;city&#125;&#125;</code>,{" "}
+                <code>&#123;&#123;first_name&#125;&#125;</code>, <code>&#123;&#123;company&#125;&#125;</code>,{" "}
+                <code>&#123;&#123;city&#125;&#125;</code>, <code>&#123;&#123;job_title&#125;&#125;</code>,{" "}
                 <code>&#123;&#123;first_name | fallback:&quot;there&quot;&#125;&#125;</code>
               </span>
             </div>
@@ -371,39 +416,174 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
         </div>
       )}
 
-      {/* TAB 2: ANALYTICS */}
+      {/* TAB 2: ANALYTICS & TELEMETRY */}
       {activeTab === "analytics" && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="clean-card p-5 rounded-xl bg-white border border-slate-200 shadow-xs">
-              <span className="text-xs text-slate-500 font-medium">Total Audience</span>
-              <div className="text-2xl font-bold text-slate-900 mt-1">{analytics?.totalLeads || 602}</div>
+              <span className="text-xs text-slate-500 font-medium">Target Audience</span>
+              <div className="text-2xl font-bold text-slate-900 mt-1">{analytics?.totalLeads || 0}</div>
+              <span className="text-[11px] text-slate-500">{campaign.targetListTag || "All Categorized Leads"}</span>
             </div>
             <div className="clean-card p-5 rounded-xl bg-white border border-slate-200 shadow-xs">
               <span className="text-xs text-slate-500 font-medium">Emails Dispatched</span>
-              <div className="text-2xl font-bold text-sky-600 mt-1">{analytics?.sentCount || 42}</div>
+              <div className="text-2xl font-bold text-sky-600 mt-1">{analytics?.sentEmails || analytics?.deliveredCount || 0}</div>
+              <span className="text-[11px] text-emerald-600 font-semibold">{analytics?.deliveredCount || 0} delivered</span>
             </div>
             <div className="clean-card p-5 rounded-xl bg-white border border-slate-200 shadow-xs">
-              <span className="text-xs text-slate-500 font-medium">Positive Replies</span>
-              <div className="text-2xl font-bold text-emerald-600 mt-1">{analytics?.repliedCount || 3}</div>
-              <div className="text-[11px] text-emerald-600 font-semibold mt-0.5">{analytics?.replyRate || "7.1% reply rate"}</div>
+              <span className="text-xs text-slate-500 font-medium">Open Rate (Est.)</span>
+              <div className="text-2xl font-bold text-emerald-600 mt-1">{analytics?.openRate || 0}%</div>
+              <span className="text-[11px] text-emerald-600 font-semibold">{analytics?.openedCount || 0} opened</span>
             </div>
             <div className="clean-card p-5 rounded-xl bg-white border border-slate-200 shadow-xs">
-              <span className="text-xs text-slate-500 font-medium">Bounces</span>
-              <div className="text-2xl font-bold text-slate-700 mt-1">{analytics?.bouncedCount || 0}</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">{analytics?.bounceRate || "0.0% bounce rate"}</div>
+              <span className="text-xs text-slate-500 font-medium">Replies Received</span>
+              <div className="text-2xl font-bold text-indigo-600 mt-1">{analytics?.repliedCount || 0}</div>
+              <span className="text-[11px] text-indigo-600 font-semibold">{analytics?.replyRate || 0}% reply rate</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* TEST EMAIL MODAL */}
+      {/* MODAL 1: LIVE BATCH DISPATCH MODAL */}
+      {showDispatchModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="clean-card p-6 rounded-xl max-w-lg w-full border border-slate-200 bg-white shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-emerald-600" />
+                <h2 className="text-base font-bold text-slate-900">Launch Outbound Batch</h2>
+              </div>
+              <span className="text-xs bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-semibold">
+                Sender: {campaign.mailbox?.email || "Connected Mailbox"}
+              </span>
+            </div>
+
+            {!dispatchResults ? (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  This action will render <strong>Step 1</strong> for candidate leads in your target category (
+                  <span className="font-semibold text-slate-900">{campaign.targetListTag || "All Leads"}</span>) and
+                  dispatch personalized emails via your connected mailbox.
+                </p>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Select Batch Volume</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[10, 25, 50, 100].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setDispatchLimit(num)}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition border ${
+                          dispatchLimit === num
+                            ? "bg-sky-600 text-white border-sky-600 shadow-xs"
+                            : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        {num} Leads
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-1">
+                  <div>• <strong>Subject:</strong> {steps[0]?.subject || "Partnership Inquiry"}</div>
+                  <div>• <strong>Pacing Delay:</strong> Automatic socket pacing to protect sender deliverability.</div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowDispatchModal(false)}
+                    className="btn-secondary text-xs py-2 px-3.5"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={dispatching}
+                    onClick={handleRunDispatch}
+                    className="btn-primary text-xs py-2 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5"
+                  >
+                    {dispatching ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Sending Outbound Batch...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Confirm & Send {dispatchLimit} Emails</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-xs space-y-1">
+                  <div className="font-bold text-sm flex items-center gap-1.5 text-emerald-800">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    Batch Dispatched Successfully!
+                  </div>
+                  <div>
+                    Processed: <strong>{dispatchResults.totalProcessed}</strong> • Delivered:{" "}
+                    <strong className="text-emerald-700">{dispatchResults.successCount}</strong> • Failed:{" "}
+                    <strong>{dispatchResults.failedCount}</strong>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs font-bold text-slate-800 mb-2">Live Dispatch Log</h3>
+                  <div className="max-h-48 overflow-y-auto space-y-1.5 border border-slate-200 rounded-lg p-2 bg-slate-50 text-[11px]">
+                    {dispatchResults.dispatches?.map((d: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200"
+                      >
+                        <span className="font-medium text-slate-800 truncate max-w-[200px]">
+                          {d.toEmail}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                            d.status === "SENT"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {d.status === "SENT" ? "Delivered (250 OK)" : "Failed"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDispatchModal(false);
+                      setDispatchResults(null);
+                    }}
+                    className="btn-primary text-xs py-2 px-4"
+                  >
+                    Close & View Telemetry
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: TEST PREVIEW MODAL */}
       {showTestModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="clean-card p-6 rounded-xl max-w-md w-full border border-slate-200 bg-white shadow-xl">
             <h2 className="text-base font-bold text-slate-900 mb-1">Send Test Cadence Email</h2>
             <p className="text-xs text-slate-500 mb-4">
-              Renders Step 1 with sample prospect variables and dispatches it live to your email.
+              Renders Step 1 with sample prospect variables and dispatches a live test email from{" "}
+              <strong>{campaign.mailbox?.email || "your connected mailbox"}</strong> to your inbox.
             </p>
 
             <form onSubmit={handleSendTestRun} className="space-y-4">
@@ -415,7 +595,7 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
                   placeholder="your-email@company.com"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-sky-600 focus:ring-1 focus:ring-sky-600"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-sky-600 focus:ring-1 focus:ring-sky-600 shadow-2xs"
                 />
               </div>
 
@@ -430,9 +610,19 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
                 <button
                   type="submit"
                   disabled={sendingTest}
-                  className="btn-sky text-xs py-2 px-4 font-semibold"
+                  className="btn-sky text-xs py-2 px-4 font-semibold flex items-center gap-1.5"
                 >
-                  {sendingTest ? "Sending..." : "Dispatch Preview"}
+                  {sendingTest ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Sending Test...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Dispatch Preview</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

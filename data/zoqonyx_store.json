@@ -16747,5 +16747,85 @@
       "createdAt": "2026-10-06T23:40:40.300Z",
       "updatedAt": "2026-10-06T23:40:40.300Z"
     }
+  ],
+  "sentEmails": [
+    {
+      "id": "sent_1791337407619_gt2",
+      "campaignId": "cmp_1791332886496",
+      "campaignName": "dentist campaign",
+      "mailboxId": "mbx_1791331249821",
+      "fromEmail": "thomas@newixtechsolutions.com",
+      "toEmail": "info@aspendental.com",
+      "leadName": "Aspen Dental",
+      "subject": "Quick question about  Aspen",
+      "status": "SENT",
+      "messageId": "<5a77235e-7ff9-bb2d-0938-43c3acbffd51@newixtechsolutions.com>",
+      "sentAt": "2026-10-07T01:43:27.619Z"
+    },
+    {
+      "id": "sent_1791337405766_mo9",
+      "campaignId": "cmp_1791332886496",
+      "campaignName": "dentist campaign",
+      "mailboxId": "mbx_1791331249821",
+      "fromEmail": "thomas@newixtechsolutions.com",
+      "toEmail": "info@adentaltlc.com",
+      "leadName": "A Dental TLC",
+      "subject": "Quick question about  A",
+      "status": "SENT",
+      "messageId": "<fcbce5cf-9e9f-52b0-d93e-b93e4fbb46cd@newixtechsolutions.com>",
+      "sentAt": "2026-10-07T01:43:25.766Z"
+    },
+    {
+      "id": "sent_1791337404088_wub",
+      "campaignId": "cmp_1791332886496",
+      "campaignName": "dentist campaign",
+      "mailboxId": "mbx_1791331249821",
+      "fromEmail": "thomas@newixtechsolutions.com",
+      "toEmail": "info@familydentistry.com",
+      "leadName": "Family Dentistry",
+      "subject": "Quick question about  Family",
+      "status": "SENT",
+      "messageId": "<cbd766a2-3eba-b9ed-03f7-ada4e880be61@newixtechsolutions.com>",
+      "sentAt": "2026-10-07T01:43:24.089Z"
+    },
+    {
+      "id": "sent_1791337402229_01h",
+      "campaignId": "cmp_1791332886496",
+      "campaignName": "dentist campaign",
+      "mailboxId": "mbx_1791331249821",
+      "fromEmail": "thomas@newixtechsolutions.com",
+      "toEmail": "info@droleary.com",
+      "leadName": "Dr. O'Leary",
+      "subject": "Quick question about  Dr.",
+      "status": "SENT",
+      "messageId": "<7d289bb6-8029-ab9e-ecc7-d3e448b64289@newixtechsolutions.com>",
+      "sentAt": "2026-10-07T01:43:22.229Z"
+    },
+    {
+      "id": "sent_1791337400443_tjj",
+      "campaignId": "cmp_1791332886496",
+      "campaignName": "dentist campaign",
+      "mailboxId": "mbx_1791331249821",
+      "fromEmail": "thomas@newixtechsolutions.com",
+      "toEmail": "info@davisdds.com",
+      "leadName": "Davis DDS",
+      "subject": "Quick question about  Davis",
+      "status": "SENT",
+      "messageId": "<c59e6d41-468f-4c85-c3cd-2e68ce85a997@newixtechsolutions.com>",
+      "sentAt": "2026-10-07T01:43:20.443Z"
+    },
+    {
+      "id": "sent_1791337394272",
+      "campaignId": "cmp_1791332886496",
+      "campaignName": "dentist campaign",
+      "mailboxId": "mbx_1791331249821",
+      "fromEmail": "thomas@newixtechsolutions.com",
+      "toEmail": "zawar@zoqonyx.com",
+      "leadName": "Test Lead",
+      "subject": "Quick question about  Test Lead",
+      "status": "SENT",
+      "messageId": "<5bbefd03-3f49-a8ed-33e6-a3de6bb375a2@newixtechsolutions.com>",
+      "sentAt": "2026-10-07T01:43:14.272Z"
+    }
   ]
 }
