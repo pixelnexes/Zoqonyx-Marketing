@@ -292,16 +292,32 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
     });
   };
 
-  const handleApplyCustomTemplate = () => {
+  const handleApplyCustomTemplate = async () => {
     const generatedHtml = generateCustomTemplateHtml();
-    handleStepChange(targetStepIndex, "bodyHtml", generatedHtml);
-    if (tmplSubject) {
-      handleStepChange(targetStepIndex, "subject", tmplSubject);
+    const updatedSteps = [...steps];
+    updatedSteps[targetStepIndex] = {
+      ...updatedSteps[targetStepIndex],
+      bodyHtml: generatedHtml,
+      subject: tmplSubject || updatedSteps[targetStepIndex]?.subject,
+    };
+    setSteps(updatedSteps);
+
+    try {
+      await fetch(`/api/v1/campaigns/${id}/sequences`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ steps: updatedSteps }),
+      });
+      toast.success(
+        "Template Saved & Applied",
+        `Step ${targetStepIndex + 1} template & subject saved to campaign cadence.`
+      );
+    } catch {
+      toast.success(
+        "Template Applied",
+        `Step ${targetStepIndex + 1} updated with "${selectedPresetId.replace(/_/g, " ")}" layout.`
+      );
     }
-    toast.success(
-      "Template Applied",
-      `Step ${targetStepIndex + 1} updated with "${selectedPresetId.replace(/_/g, " ")}" layout.`
-    );
     setShowTemplateModal(false);
   };
 
