@@ -1,0 +1,71 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: zoqonyx-prod-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zoqonyx_secure_pass_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-zoqonyx_production}
+    volumes:
+      - zoqonyx_prod_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: zoqonyx-prod-redis
+    restart: always
+    volumes:
+      - zoqonyx_prod_redisdata:/data
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zoqonyx-prod-web
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-zoqonyx_secure_pass_2026}@postgres:5432/${POSTGRES_DB:-zoqonyx_production}?schema=public"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY}
+      SESSION_SECRET: ${SESSION_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@zoqonyx.com}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD}
+    ports:
+      - "3000:3000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zoqonyx-prod-worker
+    restart: always
+    command: ["npm", "run", "worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-zoqonyx_secure_pass_2026}@postgres:5432/${POSTGRES_DB:-zoqonyx_production}?schema=public"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY}
+
+volumes:
+  zoqonyx_prod_pgdata:
+  zoqonyx_prod_redisdata:

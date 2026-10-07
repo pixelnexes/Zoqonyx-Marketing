@@ -1,0 +1,609 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MANAGER
+  MEMBER
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+  TRIALING
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  UNPAID
+}
+
+enum ProviderType {
+  SMTP_IMAP
+  MAILGUN
+  AMAZON_SES
+  SENDGRID
+  POSTMARK
+  GOOGLE_WORKSPACE
+  MICROSOFT_365
+}
+
+enum MailboxStatus {
+  ACTIVE
+  PAUSED
+  ERROR
+  DISCONNECTED
+}
+
+enum LeadStatus {
+  NEW
+  QUEUED
+  CONTACTED
+  ACTIVE
+  REPLIED
+  INTERESTED
+  NOT_INTERESTED
+  BOUNCED
+  UNSUBSCRIBED
+  PAUSED
+  COMPLETED
+}
+
+enum SuppressionReason {
+  UNSUBSCRIBED
+  HARD_BOUNCE
+  COMPLAINT
+  MANUAL_SUPPRESSION
+}
+
+enum CampaignStatus {
+  DRAFT
+  READY
+  RUNNING
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum StepType {
+  EMAIL
+  WAIT_DAYS
+  CONDITION
+}
+
+enum CampaignLeadStatus {
+  ENROLLED
+  IN_PROGRESS
+  PAUSED
+  REPLIED
+  BOUNCED
+  UNSUBSCRIBED
+  COMPLETED
+}
+
+enum EmailDispatchStatus {
+  PENDING
+  DISPATCHING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+// -------------------------------------------------------------
+// 1. AUTHENTICATION & MULTI-TENANCY
+// -------------------------------------------------------------
+
+model User {
+  id              String               @id @default(uuid())
+  email           String               @unique
+  passwordHash    String
+  name            String
+  isEmailVerified Boolean              @default(false)
+  isSuperAdmin    Boolean              @default(false)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  memberships     OrganizationMember[]
+  auditLogs       AuditLog[]
+}
+
+model Organization {
+  id                  String               @id @default(uuid())
+  name                String
+  slug                String               @unique
+  logoUrl             String?
+  status              OrgStatus            @default(ACTIVE)
+  timezone            String               @default("UTC")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  members             OrganizationMember[]
+  subscription        Subscription?
+  dailyUsageMetrics   DailyUsageMetric[]
+  mailboxes           Mailbox[]
+  leads               Lead[]
+  leadTags            LeadTag[]
+  suppressions        SuppressionList[]
+  campaigns           Campaign[]
+  emailTemplates      EmailTemplate[]
+  conversations       Conversation[]
+  apiKeys             ApiKey[]
+  webhooks            WebhookSubscription[]
+  auditLogs           AuditLog[]
+}
+
+model OrganizationMember {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String
+  role           Role         @default(MEMBER)
+  createdAt      DateTime     @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+// -------------------------------------------------------------
+// 2. PLANS, BILLING & USAGE
+// -------------------------------------------------------------
+
+model Plan {
+  id              String          @id @default(uuid())
+  name            String          @unique // FREE, STARTER, PRO, BUSINESS, ENTERPRISE
+  description     String
+  priceMonthly    Decimal         @default(0.00) @db.Decimal(10, 2)
+  priceYearly     Decimal         @default(0.00) @db.Decimal(10, 2)
+  maxContacts     Int             @default(500)
+  maxMailboxes    Int             @default(1)
+  maxDailyEmails  Int             @default(50)
+  maxCampaigns    Int             @default(2)
+  maxTeamMembers  Int             @default(1)
+  hasApiAccess    Boolean         @default(false)
+  hasAiAssistant  Boolean         @default(false)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  subscriptions   Subscription[]
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  organizationId       String             @unique
+  planId               String
+  status               SubscriptionStatus @default(ACTIVE)
+  billingInterval      BillingInterval    @default(MONTHLY)
+  currentPeriodStart   DateTime           @default(now())
+  currentPeriodEnd     DateTime
+  stripeCustomerId     String?
+  stripeSubscriptionId String?            @unique
+  isTestMode           Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan                 Plan               @relation(fields: [planId], references: [id])
+
+  @@index([organizationId])
+  @@index([planId])
+}
+
+model DailyUsageMetric {
+  id             String       @id @default(uuid())
+  organizationId String
+  date           DateTime     @db.Date
+  emailsSent     Int          @default(0)
+  emailsFailed   Int          @default(0)
+  repliesReceived Int         @default(0)
+  bouncesDetected Int         @default(0)
+  unsubscribes   Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, date])
+  @@index([organizationId])
+  @@index([date])
+}
+
+// -------------------------------------------------------------
+// 3. MAILBOXES & ENCRYPTED CREDENTIALS
+// -------------------------------------------------------------
+
+model Mailbox {
+  id             String              @id @default(uuid())
+  organizationId String
+  email          String
+  fromName       String
+  replyToEmail   String?
+  providerType   ProviderType        @default(SMTP_IMAP)
+  status         MailboxStatus       @default(ACTIVE)
+  dailyLimit     Int                 @default(100)
+  sentToday      Int                 @default(0)
+  lastSyncAt     DateTime?
+  lastError      String?
+  spfValid       Boolean             @default(false)
+  dkimValid      Boolean             @default(false)
+  dmarcValid     Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  credential     ProviderCredential?
+  campaigns      Campaign[]
+  sentEmails     SentEmail[]
+  scheduledEmails ScheduledEmail[]
+  conversations  Conversation[]
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([email])
+}
+
+model ProviderCredential {
+  id               String   @id @default(uuid())
+  mailboxId        String   @unique
+  encryptedPayload String   @db.Text
+  iv               String
+  authTag          String
+  keyVersion       Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  mailbox          Mailbox  @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+}
+
+// -------------------------------------------------------------
+// 4. LEADS, TAGS & SUPPRESSION
+// -------------------------------------------------------------
+
+model Lead {
+  id               String             @id @default(uuid())
+  organizationId   String
+  email            String
+  firstName        String?
+  lastName         String?
+  company          String?
+  jobTitle         String?
+  phone            String?
+  website          String?
+  industry         String?
+  city             String?
+  state            String?
+  country          String?
+  status           LeadStatus         @default(NEW)
+  customFields     Json               @default("{}")
+  source           String             @default("CSV_IMPORT")
+  unsubscribeToken String             @unique @default(uuid())
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campaignLeads    CampaignLead[]
+  sentEmails       SentEmail[]
+  scheduledEmails  ScheduledEmail[]
+  conversations    Conversation[]
+  tags             LeadTagAssignment[]
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([email])
+  @@index([status])
+}
+
+model LeadTag {
+  id             String              @id @default(uuid())
+  organizationId String
+  name           String
+  color          String              @default("#0ea5e9")
+  createdAt      DateTime            @default(now())
+
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leads          LeadTagAssignment[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model LeadTagAssignment {
+  id        String   @id @default(uuid())
+  leadId    String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tag       LeadTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, tagId])
+}
+
+model SuppressionList {
+  id             String            @id @default(uuid())
+  organizationId String
+  email          String
+  reason         SuppressionReason @default(MANUAL_SUPPRESSION)
+  createdAt      DateTime          @default(now())
+
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([email])
+}
+
+// -------------------------------------------------------------
+// 5. CAMPAIGNS & SEQUENCES
+// -------------------------------------------------------------
+
+model Campaign {
+  id              String            @id @default(uuid())
+  organizationId  String
+  name            String
+  description     String?
+  status          CampaignStatus    @default(DRAFT)
+  mailboxId       String?
+  dailyLimit      Int               @default(50)
+  timezone        String            @default("UTC")
+  sendingDays     Int[]             @default([1, 2, 3, 4, 5])
+  startHour       Int               @default(9)
+  endHour         Int               @default(17)
+  isTestMode      Boolean           @default(false)
+  autoEnrollRules Json?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  mailbox         Mailbox?          @relation(fields: [mailboxId], references: [id], onDelete: SetNull)
+  sequenceSteps   SequenceStep[]
+  campaignLeads   CampaignLead[]
+  scheduledEmails ScheduledEmail[]
+  sentEmails      SentEmail[]
+  conversations   Conversation[]
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model SequenceStep {
+  id              String           @id @default(uuid())
+  campaignId      String
+  stepNumber      Int
+  stepType        StepType         @default(EMAIL)
+  waitDays        Int              @default(0)
+  subject         String?
+  bodyHtml        String?          @db.Text
+  bodyText        String?          @db.Text
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  campaign        Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  scheduledEmails ScheduledEmail[]
+  sentEmails      SentEmail[]
+
+  @@unique([campaignId, stepNumber])
+  @@index([campaignId])
+}
+
+model CampaignLead {
+  id                String             @id @default(uuid())
+  campaignId        String
+  leadId            String
+  currentStepNumber Int                @default(1)
+  status            CampaignLeadStatus @default(ENROLLED)
+  nextExecutionAt   DateTime?
+  enrolledAt        DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  campaign          Campaign           @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead              Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, leadId])
+  @@index([campaignId])
+  @@index([leadId])
+  @@index([status])
+  @@index([nextExecutionAt])
+}
+
+// -------------------------------------------------------------
+// 6. SCHEDULING, SENT DISPATCHES & INBOX
+// -------------------------------------------------------------
+
+model ScheduledEmail {
+  id             String              @id @default(uuid())
+  organizationId String
+  campaignId     String
+  leadId         String
+  sequenceStepId String
+  mailboxId      String
+  idempotencyKey String              @unique
+  scheduledFor   DateTime
+  status         EmailDispatchStatus @default(PENDING)
+  subject        String
+  renderedHtml   String              @db.Text
+  renderedText   String?             @db.Text
+  errorMessage   String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  campaign       Campaign            @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead           Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  sequenceStep   SequenceStep        @relation(fields: [sequenceStepId], references: [id], onDelete: Cascade)
+  mailbox        Mailbox             @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([scheduledFor])
+  @@index([status])
+}
+
+model SentEmail {
+  id             String        @id @default(uuid())
+  organizationId String
+  campaignId     String
+  leadId         String
+  sequenceStepId String
+  mailboxId      String
+  messageId      String?       @unique
+  idempotencyKey String        @unique
+  toEmail        String
+  fromEmail      String
+  subject        String
+  bodyHtml       String?       @db.Text
+  bodyText       String?       @db.Text
+  sentAt         DateTime      @default(now())
+
+  campaign       Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead           Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  sequenceStep   SequenceStep  @relation(fields: [sequenceStepId], references: [id], onDelete: Cascade)
+  mailbox        Mailbox       @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  inboundEmails  InboundEmail[]
+
+  @@index([organizationId])
+  @@index([campaignId])
+  @@index([leadId])
+  @@index([sentAt])
+}
+
+model Conversation {
+  id             String         @id @default(uuid())
+  organizationId String
+  leadId         String
+  campaignId     String?
+  mailboxId      String
+  subject        String
+  snippet        String?
+  status         String         @default("REPLIED") // REPLIED, INTERESTED, NOT_INTERESTED, CLOSED
+  lastActivityAt DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead           Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  campaign       Campaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  mailbox        Mailbox        @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  inboundEmails  InboundEmail[]
+
+  @@index([organizationId])
+  @@index([leadId])
+  @@index([lastActivityAt])
+}
+
+model InboundEmail {
+  id             String        @id @default(uuid())
+  conversationId String
+  sentEmailId    String?
+  fromEmail      String
+  toEmail        String
+  subject        String
+  bodyCleanText  String        @db.Text
+  bodyHtml       String?       @db.Text
+  rawHeaders     Json?
+  messageId      String?
+  receivedAt     DateTime      @default(now())
+
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sentEmail      SentEmail?    @relation(fields: [sentEmailId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId])
+  @@index([fromEmail])
+  @@index([receivedAt])
+}
+
+// -------------------------------------------------------------
+// 7. TEMPLATES, API KEYS, WEBHOOKS & AUDITING
+// -------------------------------------------------------------
+
+model EmailTemplate {
+  id             String       @id @default(uuid())
+  organizationId String
+  name           String
+  subject        String
+  bodyHtml       String       @db.Text
+  bodyText       String?      @db.Text
+  category       String       @default("General")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([category])
+}
+
+model ApiKey {
+  id             String       @id @default(uuid())
+  organizationId String
+  name           String
+  keyHash        String       @unique
+  keyPrefix      String
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([keyHash])
+}
+
+model WebhookSubscription {
+  id             String       @id @default(uuid())
+  organizationId String
+  targetUrl      String
+  secret         String
+  events         String[]     // lead.created, email.sent, email.replied, email.bounced, lead.unsubscribed
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model AuditLog {
+  id             String        @id @default(uuid())
+  organizationId String?
+  userId         String?
+  action         String
+  targetType     String
+  targetId       String?
+  metadata       Json?
+  ipAddress      String?
+  createdAt      DateTime      @default(now())
+
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model FeatureFlag {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  description String
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
