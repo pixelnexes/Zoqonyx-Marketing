@@ -67,11 +67,24 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           sentAt: new Date().toISOString(),
         });
 
+        if (!dispatchRes.success) {
+          return NextResponse.json(
+            {
+              error: dispatchRes.error || "SMTP rejected the test email dispatch.",
+              details: dispatchRes.providerResponse,
+            },
+            { status: 400 }
+          );
+        }
+
         return NextResponse.json({ success: true, result: dispatchRes });
       } catch (smtpErr: any) {
-        return NextResponse.json({
-          error: `SMTP Dispatch Error: ${smtpErr.message}`,
-        }, { status: 502 });
+        return NextResponse.json(
+          {
+            error: `SMTP Dispatch Error: ${smtpErr.message}`,
+          },
+          { status: 502 }
+        );
       }
     }
 
