@@ -24,10 +24,11 @@ export interface LeadTemplateContext {
 export function renderTemplate(template: string, context: LeadTemplateContext): string {
   if (!template) return "";
 
-  // Regular expression matching {{ variable | fallback:"val" }} or {{ variable }}
-  const variableRegex = /\{\{\s*([a-zA-Z0-9_.]+)(?:\s*\|\s*fallback:\s*(?:"([^"]*)"|'([^']*)'))?\s*\}\}/g;
+  // Regular expression matching {{ variable | fallback:"val" }} or {{ variable }} (supporting spaces like {{First Name}})
+  const variableRegex = /\{\{\s*([a-zA-Z0-9_.\s]+?)(?:\s*\|\s*fallback:\s*(?:"([^"]*)"|'([^']*)'))?\s*\}\}/g;
 
-  return template.replace(variableRegex, (match, varPath, fallbackDouble, fallbackSingle) => {
+  return template.replace(variableRegex, (match, rawVarPath, fallbackDouble, fallbackSingle) => {
+    const varPath = String(rawVarPath).trim();
     const fallback = fallbackDouble ?? fallbackSingle ?? "";
     const value = resolveVariableValue(varPath, context);
 
